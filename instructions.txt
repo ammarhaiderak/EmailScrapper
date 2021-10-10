@@ -1,0 +1,6 @@
+
+1. run=>pip install -r requirements.txt
+2. place the csv file inside the directory
+3. you will be asked to give the file name so enter the file name respective e.g "links.csv"
+4. run=>python emailscrapper.py
+5. you will get a file named "emailfile.csv" when the scrapper has completed fetching emails from links.

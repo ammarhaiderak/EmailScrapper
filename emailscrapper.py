@@ -5,8 +5,6 @@
 Run the cell below and restart the runtime
 """
 
-!pip install scrapy
-
 import logging
 import os
 import pandas as pd
@@ -14,29 +12,18 @@ import re
 import scrapy
 from scrapy.crawler import CrawlerProcess
 from scrapy.linkextractors.lxmlhtml import LxmlLinkExtractor
-from googlesearch import search
 logging.getLogger('scrapy').propagate = False
 
-def get_urls(tag, n, language):
-    urls = [url for url in search(tag, stop=n, lang=language)][:n]
+def get_urls():
+    filename=input('Enter the links file name e.g "links.csv": ')
+    df = pd.read_csv(filename)
+    urls=df['WEBSITE'].to_list()
+    print(urls)
     return urls
-
-def returnUrls(company,ext):
-  query1='\" email *@'+company+ext+'\"'
-  query2='\" email **@'+company+ext+'\"'
-  query3='\" email ***@'+company+ext+'\"'
-  query4='\" email *.*@'+company+ext+'\"'
-
-  l1=get_urls(query1,100,'en')
-  l1+=get_urls(query2,100,'en')
-  l1+=get_urls(query3,100,'en')
-  l1+=get_urls(query4,100,'en')
-
-  return list(set(l1))
 
 
 def ask_user(question):
-    response = raw_input(question + ' y/n' + '\n')
+    response = input(question + ' y/n' + '\n')
     if str(response) == 'y':
         return True
     else:
@@ -62,11 +49,10 @@ class MailSpider(scrapy.Spider):
 
 
     def parse(self, response):
-        
         links = LxmlLinkExtractor(allow=()).extract_links(response)
         links = [str(link.url) for link in links]
         links.append(str(response.url))
-        
+
         for link in links:
             yield scrapy.Request(url=link, callback=self.parse_link) 
             
@@ -75,9 +61,11 @@ class MailSpider(scrapy.Spider):
         for word in self.reject:
             if word in str(response.url):
                 return
-            
+
         html_text = str(response.text)
-        mail_list = re.findall('\w+@'+ext+'\.{1}\w+', html_text)
+        EMAIL_REGEX = r"""\w+@\w+\.{1}(?!png|jpg|JPG|PNG|JPEG|jpeg)\w+"""
+        mail_list = re.findall(EMAIL_REGEX, html_text)
+        print(mail_list)
 
         dic = {'email': mail_list, 'link': str(response.url)}
         df = pd.DataFrame(dic)
@@ -86,19 +74,18 @@ class MailSpider(scrapy.Spider):
         df.to_csv(self.path, mode='a', header=False)
 
 
-def get_info(tag,ext, n, language, path, reject=[]):
+def get_info(ext, n, language, path, reject=[]):
     
     create_file(path)
     df = pd.DataFrame(columns=['email', 'link'], index=[0])
     df.to_csv(path, mode='w', header=True)
     
-    print('Collecting Google urls...')
-    google_urls = get_urls(tag,n,language)
-    #returnUrls(tag,ext)
+    print('Collecting urls...')
+    _urls = get_urls(n,language)
     
     print('Searching for emails...')
     process = CrawlerProcess({'USER_AGENT': 'Mozilla/5.0'})
-    process.crawl(MailSpider, start_urls=google_urls, path=path, reject=reject)
+    process.crawl(MailSpider, start_urls=_urls, path=path, reject=reject)
     process.start()
     
     print('Cleaning emails...')
@@ -111,7 +98,7 @@ def get_info(tag,ext, n, language, path, reject=[]):
     return df
 
 
-bad_words = ['facebook', 'instagram', 'youtube', 'twitter', 'wiki']
 
-Query = raw_input('Enter the google query here: ')
-df = get_info(str(Query),'.com', 300, 'en', 'studios.csv', reject=bad_words)
+bad_words = ['facebook', 'instagram', 'youtube', 'twitter', 'wiki', 'paypal']
+
+df = get_info('.com', 300, 'en', 'emailfile.csv', bad_words)
