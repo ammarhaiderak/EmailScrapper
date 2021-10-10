@@ -65,7 +65,8 @@ class MailSpider(scrapy.Spider):
         html_text = str(response.text)
         EMAIL_REGEX = r"""\w+@\w+\.{1}(?!png|jpg|JPG|PNG|JPEG|jpeg)\w+"""
         mail_list = re.findall(EMAIL_REGEX, html_text)
-        print(mail_list)
+        if len(mail_list)>0:
+            print(mail_list)
 
         dic = {'email': mail_list, 'link': str(response.url)}
         df = pd.DataFrame(dic)
@@ -81,7 +82,7 @@ def get_info(ext, n, language, path, reject=[]):
     df.to_csv(path, mode='w', header=True)
     
     print('Collecting urls...')
-    _urls = get_urls(n,language)
+    _urls = get_urls()
     
     print('Searching for emails...')
     process = CrawlerProcess({'USER_AGENT': 'Mozilla/5.0'})
